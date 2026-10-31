@@ -8,3 +8,252 @@ This command might prompt you for your password to install the certificate on th
 Successfully trusted the existing HTTPS certificate.
 
 
+
+
+When I try to run "TodoAPI (.NET, https)", I get:
+
+Using launch settings from '/Users/blauerbock/workspaces/todo-app/TodoApi/Properties/launchSettings.json' [Profile 'https']...
+
+You must install or update .NET to run this application.
+
+
+
+App: /Users/blauerbock/workspaces/todo-app/TodoApi/bin/Debug/net8.0/TodoApi.dll
+
+Architecture: arm64
+
+Framework: 'Microsoft.NETCore.App', version '8.0.0' (arm64)
+
+.NET location: /usr/local/share/dotnet/
+
+
+
+The following frameworks were found:
+
+  10.0.14 at [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
+
+
+
+Learn more:
+
+https://aka.ms/dotnet/app-launch-failed
+
+
+
+To install missing framework, download:
+
+https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_version=8.0.0&arch=arm64&rid=osx-arm64&os=osx.15
+
+The target process exited without raising a CoreCLR started event. Ensure that the target process is configured to use .NET Core. This may be expected if the target process did not run on .NET Core.
+
+The program '[1165] TodoApi.dll' has exited with code 150 (0x96).
+
+
+## What happened
+
+Your Mac has the **.NET 10 runtime** (10.0.14) installed, but the project targeted **.NET 8** — the build succeeded (the .NET 10 SDK can compile net8.0), but at launch the debugger found no 8.0 runtime to run it. That's the "exit code 150" you saw.
+
+## The fix (already applied in the updated zip)
+
+I retargeted the project to .NET 10, which matches what you have — nothing new to install:
+
+- `TodoApi/TodoApi.csproj` — `<TargetFramework>` is now `net10.0`, and the EF Core packages are bumped to 10.0.14, the current stable release [nuget](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.sqlserver/)
+- `.vscode/launch.json` — the debugger's `program` path now points to `bin/Debug/net10.0/TodoApi.dll`
+- README — prerequisites and troubleshooting updated for this error
+
+To apply it to your existing copy: unzip over your folder (or manually make those three small edits), then clean the stale build output before pressing F5:
+
+```bash
+cd TodoApi
+rm -rf bin obj
+
+or
+
+rm -rf bin
+rm -rf obj
+
+
+dotnet restore
+```
+
+
+ dotnet restore
+Restore succeeded with 4 warning(s) in 0.4s
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1902: Package 'Azure.Identity' 1.10.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m5vv-6r4h-3vj9
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1902: Package 'Azure.Identity' 1.10.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-wvxc-855f-jvrv
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1902: Package 'Microsoft.Identity.Client' 4.56.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m5vv-6r4h-3vj9
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1901: Package 'Microsoft.Identity.Client' 4.56.0 has a known low severity vulnerability, https://github.com/advisories/GHSA-x674-v45j-fwxw
+
+Build succeeded with 4 warning(s) in 0.6s
+blauerbock TodoApi [first-run] % 
+
+
+
+Then F5 again — Swagger should open at `https://localhost:5001/swagger`.
+
+The alternative, for reference: if you ever need to keep a project on net8.0 (e.g., matching a production server), install the 8.0 runtime alongside 10 with `brew install --cask dotnet-runtime8` — multiple .NET versions coexist fine.
+
+
+
+
+ dotnet restore
+Restore succeeded with 4 warning(s) in 0.4s
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1902: Package 'Azure.Identity' 1.10.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m5vv-6r4h-3vj9
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1902: Package 'Azure.Identity' 1.10.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-wvxc-855f-jvrv
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1902: Package 'Microsoft.Identity.Client' 4.56.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-m5vv-6r4h-3vj9
+    /Users/blauerbock/workspaces/todo-app/TodoApi/TodoApi.csproj : warning NU1901: Package 'Microsoft.Identity.Client' 4.56.0 has a known low severity vulnerability, https://github.com/advisories/GHSA-x674-v45j-fwxw
+
+Build succeeded with 4 warning(s) in 0.6s
+blauerbock TodoApi [first-run] % 
+
+
+
+Opened swagger interface:
+
+https://localhost:5001/swagger/index.html
+
+POST api/TodoItems
+{
+  "id": 0,
+  "title": "Wash the car",
+  "isComplete": true
+}
+
+Exception has occurred: CLR/Microsoft.Data.SqlClient.SqlException
+An exception of type 'Microsoft.Data.SqlClient.SqlException' occurred in System.Private.CoreLib.dll but was not handled in user code: 'Login failed for user 'sa'.'
+   at Microsoft.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at Microsoft.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at Microsoft.Data.SqlClient.TdsParser.Run(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.CompleteLogin(Boolean enlistOK)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.AttemptOneLogin(ServerInfo serverInfo, String newPassword, SecureString newSecurePassword, Boolean ignoreSniOpenTimeout, TimeoutTimer timeout, Boolean withFailover)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.LoginNoFailover(ServerInfo serverInfo, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance, SqlConnectionString connectionOptions, SqlCredential credential, TimeoutTimer timeout)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds.OpenLoginEnlist(TimeoutTimer timeout, SqlConnectionString connectionOptions, SqlCredential credential, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance)
+   at Microsoft.Data.SqlClient.SqlInternalConnectionTds..ctor(DbConnectionPoolIdentity identity, SqlConnectionString connectionOptions, SqlCredential credential, Object providerInfo, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance, SqlConnectionString userConnectionOptions, SessionData reconnectSessionData, Boolean applyTransientFaultHandling, String accessToken, DbConnectionPool pool)
+   at Microsoft.Data.SqlClient.SqlConnectionFactory.CreateConnection(DbConnectionOptions options, DbConnectionPoolKey poolKey, Object poolGroupProviderInfo, DbConnectionPool pool, DbConnection owningConnection, DbConnectionOptions userOptions)
+   at Microsoft.Data.ProviderBase.DbConnectionFactory.CreatePooledConnection(DbConnectionPool pool, DbConnection owningObject, DbConnectionOptions options, DbConnectionPoolKey poolKey, DbConnectionOptions userOptions)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.CreateObject(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.UserCreateRequest(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.TryGetConnection(DbConnection owningObject, UInt32 waitForMultipleObjectsTimeout, Boolean allowCreate, Boolean onlyOneCheckConnection, DbConnectionOptions userOptions, DbConnectionInternal& connection)
+   at Microsoft.Data.ProviderBase.DbConnectionPool.WaitForPendingOpen()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.<OpenInternalAsync>d__70.MoveNext()
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.<OpenInternalAsync>d__70.MoveNext()
+   at Microsoft.EntityFrameworkCore.Storage.RelationalConnection.<OpenAsync>d__66.MoveNext()
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.<ExecuteAsync>d__9.MoveNext()
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.<ExecuteAsync>d__9.MoveNext()
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.<ExecuteAsync>d__9.MoveNext()
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.<SaveChangesAsync>d__111.MoveNext()
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.<SaveChangesAsync>d__115.MoveNext()
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.<ExecuteAsync>d__7`2.MoveNext()
+   at Microsoft.EntityFrameworkCore.DbContext.<SaveChangesAsync>d__63.MoveNext()
+   at Microsoft.EntityFrameworkCore.DbContext.<SaveChangesAsync>d__63.MoveNext()
+   at TodoApi.Controllers.TodoItemsController.<CreateTodoItem>d__5.MoveNext() in /Users/blauerbock/workspaces/todo-app/TodoApi/Controllers/TodoItemsController.cs:line 51
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.<Execute>d__0.MoveNext()
+   at System.Runtime.CompilerServices.ValueTaskAwaiter`1.GetResult()
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<<InvokeActionMethodAsync>g__Awaited|12_0>d.MoveNext()
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<<InvokeNextActionFilterAsync>g__Awaited|10_0>d.MoveNext()
+
+
+
+
+   Login failed for user 'sa': the connection string still has the placeholder password (YourStrong@Passw0rd). Set your real one with user-secrets (overrides appsettings in Development):
+
+cd TodoApi
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+  "Server=localhost,1433;Database=TodoDb;User Id=sa;Password=YOUR_REAL_PASSWORD;TrustServerCertificate=True;"
+
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+  "Server=localhost,1433;Database=TodoDb;User Id=sa;Password=YourStr0ngP@ss123;TrustServerCertificate=True;"
+
+
+Successfully saved ConnectionStrings:DefaultConnection to the secret store.
+
+
+Test credentials directly to rule out an app issue:
+
+docker exec -it <container> /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P 'YOUR_REAL_PASSWORD' -C -Q "SELECT name FROM sys.databases"
+
+
+docker exec -it e08865bda7d66ef0da15b7a2844929fd8c5202b70136cef7ce84ebaa22a49cfa /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P 'YourStr0ngP@ss123' -C -Q "SELECT name FROM sys.databases"
+
+
+Also check that todo_user was mapped in TodoDb (rerun the SQL script) if you use that login.
+
+Connection refused on 1433: SQL Server container isn't running — docker ps to check, docker start <container> if stopped.
+
+CORS error in the browser console: the front end must be served from exactly https://localhost:5173 (the origin in Program.cs) and the API profile must be https.
+
+SQL Server in Docker + ARM Mac: use the mcr.microsoft.com/azure-sql-edge image if the 2022 SQL Server image won't run (Azure SQL Edge supports ARM64; note it lacks some SQL Server 2022 features but is fine for this app).
+
+cd TodoApi
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+  "Server=localhost,1433;Database=TodoDb;User Id=sa;Password=YOUR_REAL_PASSWORD;TrustServerCertificate=True;"
+
+
+
+
+blauerbock TodoApi [first-run] % mkcert -install
+Created a new local CA 💥
+Sudo password:
+The local CA is now installed in the system trust store! ⚡️
+The local CA is now installed in Java's trust store! ☕️
+
+
+
+curl --url 'https://localhost:5001/api/todoitems' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'dnt: 1' \
+  -H 'origin: https://localhost:5173' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://localhost:5173/' \
+  -H 'sec-ch-ua: "Google Chrome";v="155", "Chromium";v="155", "Not(A:Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?1' \
+  -H 'sec-ch-ua-platform: "Android"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-site' \
+  -H 'user-agent: Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36'
+
+
+
+  curl --url 'https://localhost:5001/api/todoitems' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'content-type: application/json' \
+  -H 'dnt: 1' \
+  -H 'origin: https://localhost:5173' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://localhost:5173/' \
+  -H 'sec-ch-ua: "Google Chrome";v="155", "Chromium";v="155", "Not(A:Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?1' \
+  -H 'sec-ch-ua-platform: "Android"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-site' \
+  -H 'user-agent: Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36' \
+  --data-raw '{"id":0,"title":"Auto repairs","isComplete":false}'
+
+
+curl --url 'https://localhost:5001/api/todoitems' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'content-type: application/json' \
+  -H 'dnt: 1' \
+  -H 'origin: https://localhost:5173' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://localhost:5173/' \
+  -H 'sec-ch-ua: "Google Chrome";v="155", "Chromium";v="155", "Not(A:Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?1' \
+  -H 'sec-ch-ua-platform: "Android"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-site' \
+  -H 'user-agent: Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36' \
+  --data-raw '{"id":0,"title":"Paint the house","isComplete":false}'
+
+
+  

@@ -1,4 +1,4 @@
-# Todo App — React/Vite + .NET 8 + SQL Server (HTTPS everywhere)
+# Todo App — React/Vite + .NET 10 + SQL Server (HTTPS everywhere)
 
 A simple full-stack CRUD app:
 
@@ -14,7 +14,7 @@ The React app calls `POST /api/todoitems` (and GET/PUT/DELETE) to add, edit, and
 
 ```text
 todo-app/
-├── TodoApi/                    # .NET 8 Web API
+├── TodoApi/                    # .NET 10 Web API
 │   ├── Controllers/TodoItemsController.cs   # CRUD endpoints
 │   ├── Models/TodoItem.cs
 │   ├── Data/AppDbContext.cs    # EF Core DbContext
@@ -28,7 +28,7 @@ todo-app/
 
 ## Prerequisites (macOS)
 
-- .NET 8 SDK: `brew install --cask dotnet-sdk` (or download from <https://dotnet.microsoft.com/download>)
+- .NET 10 SDK: `brew install --cask dotnet-sdk` (or download from https://dotnet.microsoft.com/download). The project targets `net10.0`; if you only have an older .NET installed, either upgrade or run `brew install --cask dotnet-sdk@8` and change `<TargetFramework>` back to `net8.0` in `TodoApi/TodoApi.csproj`.
 - Node.js 18+: `brew install node`
 - SQL Server already running on your machine (e.g., in Docker):
   `docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=YourStrong@Passw0rd" -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest`
@@ -172,10 +172,36 @@ The API starts on `https://localhost:5001`, and the browser opens **Swagger UI**
 ```bash
 brew install mkcert
 mkcert -install                       # adds a local CA to your macOS keychain
+
+
+blauerbock TodoApi [first-run] % mkcert -install
+Created a new local CA 💥
+Sudo password:
+The local CA is now installed in the system trust store! ⚡️
+The local CA is now installed in Java's trust store! ☕️
+
+
 cd todo-frontend
 mkdir -p certs
 mkcert -key-file certs/localhost-key.pem -cert-file certs/localhost.pem localhost
+
+
+ mkdir -p certs
+blauerbock todo-frontend [first-run] % mkcert -key-file certs/localhost-key.pem -cert-file certs/localhost.pem localhost
+
+Created a new certificate valid for the following names 📜
+ - "localhost"
+
+The certificate is at "certs/localhost.pem" and the key at "certs/localhost-key.pem" ✅
+
+It will expire on 31 January 2029 🗓
+
+
 ```
+
+
+
+
 
 ## Step 5 — Run the React front end
 
@@ -227,9 +253,28 @@ So on your MacBook: Kestrel is the substitute you already have; the Swagger page
 | DELETE | `/api/todoitems/{id}` | remove item |
 
 ## Troubleshooting
+- **`You must install or update .NET ... Framework: 'Microsoft.NETCore.App', version '8.0.0'`:** the project's target framework didn't match your installed runtime. This project now targets `net10.0`, which matches a current .NET 10 install (`dotnet --list-runtimes` shows what you have). If you see a similar message with a different version, either install that runtime or edit `<TargetFramework>` in `TodoApi/TodoApi.csproj` to match. After changing it, delete the old `TodoApi/bin` and `TodoApi/obj` folders, and update the `program` path in `.vscode/launch.json` (e.g. `net8.0` → `net10.0`).
+
+- **`code: command not found`:** run VS Code, Cmd+Shift+P → **"Shell Command: Install 'code' command in PATH"**. Or add to `~/.zshrc`:
+  ```bash
+  export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  ```
 
 - **Browser warning on the API cert:** run `dotnet dev-certs https --trust` (and on Chrome, restart it).
 - **`Login failed for user` errors:** verify credentials and that `todo_user` was mapped in `TodoDb` (rerun the SQL script).
+
+- **`Login failed for user 'sa'`:** the connection string still has the placeholder password (`YourStrong@Passw0rd`). Set your real one with user-secrets (overrides appsettings in Development):
+  ```bash
+  cd TodoApi
+  dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+    "Server=localhost,1433;Database=TodoDb;User Id=sa;Password=YOUR_REAL_PASSWORD;TrustServerCertificate=True;"
+  ```
+  Test credentials directly to rule out an app issue:
+  ```bash
+  docker exec -it <container> /opt/mssql-tools18/bin/sqlcmd \
+    -S localhost -U sa -P 'YOUR_REAL_PASSWORD' -C -Q "SELECT name FROM sys.databases"
+  ```
+  Also check that `todo_user` was mapped in `TodoDb` (rerun the SQL script) if you use that login.
 - **`Connection refused` on 1433:** SQL Server container isn't running — `docker ps` to check, `docker start <container>` if stopped.
 - **CORS error in the browser console:** the front end must be served from exactly `https://localhost:5173` (the origin in `Program.cs`) and the API profile must be `https`.
 - **SQL Server in Docker + ARM Mac:** use the `mcr.microsoft.com/azure-sql-edge` image if the 2022 SQL Server image won't run (Azure SQL Edge supports ARM64; note it lacks some SQL Server 2022 features but is fine for this app).
